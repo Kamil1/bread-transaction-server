@@ -61,12 +61,13 @@ app.post('/create_transaction', jsonParser, function(request, response) {
 });
 
 function monitorTransaction(uid) {
-    var ref = firebaseDB.ref("users/" + uid + "/transactions/approved_transactions");
-    var callback = ref.once("child_added", function(snapshot, prevChildKey) {
+    var ref = firebaseDB.ref("users/" + uid + "/transactions/pending_transactions");
+    function transactionCallback(snapshot, prevChildKey) {
         var transactionID = snapshot.val();
         executeTransaction(transactionID, uid);
-    });
-    setTimeout(ref.off("child_added", callback), 3000);
+    }
+    ref.once("child_added", transactionCallback);
+    setTimeout(ref.off("child_added", transactionCallback), 3000);
 }
 
 function executeTransaction(transactionID, uid) {
