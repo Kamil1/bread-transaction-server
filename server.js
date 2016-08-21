@@ -62,6 +62,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
 
 function monitorTransaction(uid) {
     var ref = firebaseDB.ref("users/" + uid + "/transactions/pending_transactions");
+    console.log("monitoring user response");
     function transactionCallback(snapshot, prevChildKey) {
         var transactionID = snapshot.val();
         executeTransaction(transactionID, uid);
@@ -72,10 +73,10 @@ function monitorTransaction(uid) {
 
 function executeTransaction(transactionID, uid) {
     console.log("CALLBACK CALLED!");
-    var ref = firebaseDB.ref("users/uid/pantry/balance");
+    var ref = firebaseDB.ref("users/" + uid + "/pantry/balance");
     pg.connect(process.env.DATA_URL, function(err, client, done) {
         client.query('SELECT * FROM pending_transactions WHERE transaction_id = $1', [transactionID], function (err, result) {
-            if (err) throw err
+            if (err) throw err;
             console.log(result.rows[0]);
         })
     });
