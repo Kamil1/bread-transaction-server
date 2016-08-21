@@ -67,7 +67,7 @@ function monitorTransaction(uid) {
         var transactionID = snapshot.val();
         executeTransaction(transactionID, uid);
     }
-    ref.once("child_added", transactionCallback);
+    ref.once("child_changed", transactionCallback);
 }
 
 function executeTransaction(transactionID, uid) {
