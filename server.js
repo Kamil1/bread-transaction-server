@@ -61,8 +61,9 @@ app.post('/create_transaction', jsonParser, function(request, response) {
 });
 
 function monitorTransaction(uid) {
-    var ref = firebaseDB.ref("users/" + uid + "/transactions/pending_transactions");
-    console.log("monitoring user response");
+    var path = "users/" + uid + "/transactions/pending_transactions";
+    var ref = firebaseDB.ref(path);
+    console.log("monitoring user response at path: " + path);
     function transactionCallback(snapshot, prevChildKey) {
         var transactionID = snapshot.val();
         executeTransaction(transactionID, uid);
