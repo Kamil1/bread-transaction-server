@@ -49,7 +49,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
     client.query(queryText, [transactionID, userIDTest, clientID, item, quantity, bread], function (err, result) {
       if (err) console.log(err);
       else {
-          monitorTransaction(userID);
+          monitorTransaction(userIDTest);
         // return transaction ID to user (who will record it themselves in Firebase) and place monitor on uid's "transaction history" for 3 mins
         // if it appears in "approved transactions", take steps to make it go through
         // if it appears in "declined transactions", take steps for it to fail
