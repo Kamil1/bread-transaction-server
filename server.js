@@ -67,10 +67,11 @@ function monitorTransaction(uid) {
         executeTransaction(transactionID, uid);
     }
     ref.once("child_added", transactionCallback);
-    setTimeout(ref.off("child_added", transactionCallback), 3000);
+    setTimeout(ref.off("child_added", transactionCallback), 300000);
 }
 
 function executeTransaction(transactionID, uid) {
+    console.log("CALLBACK CALLED!");
     var ref = firebaseDB.ref("users/uid/pantry/balance");
     pg.connect(process.env.DATA_URL, function(err, client, done) {
         client.query('SELECT * FROM pending_transactions WHERE transaction_id = $1', [transactionID], function (err, result) {
