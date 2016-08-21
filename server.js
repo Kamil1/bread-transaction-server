@@ -68,7 +68,6 @@ function monitorTransaction(uid) {
         executeTransaction(transactionID, uid);
     }
     ref.once("child_added", transactionCallback);
-    setTimeout(ref.off("child_added", transactionCallback), 300000);
 }
 
 function executeTransaction(transactionID, uid) {
