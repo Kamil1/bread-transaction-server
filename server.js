@@ -29,7 +29,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
     var transactionID = uuid.v4();
     var userID        = "";
     var clientID      = request.body.client_id;
-    var itemID        = request.body.item_id;
+    var itemID        = request.body.item;
     var quantity      = request.body.quantity;
     var bread         = request.body.bread;
     var token         = request.body.user_token;
