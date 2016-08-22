@@ -37,7 +37,6 @@ app.post('/create_transaction', jsonParser, function(request, response) {
     firebase.auth().verifyIdToken(token).then(function(decodedToken) {
       userID = decodedToken.uid;
     }).catch (function (error) {
-        console.log("FAILED to authorize token");
         console.log(error);
         return response.status(401).send("Unauthorized");
     });
