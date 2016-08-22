@@ -37,8 +37,9 @@ app.post('/create_transaction', jsonParser, function(request, response) {
     firebase.auth().verifyIdToken(token).then(function(decodedToken) {
       userID = decodedToken.uid;
     }).catch (function (error) {
+        console.log("FAILED to authorize token");
         console.log(error);
-        return response.sendStatus(400);
+        return response.status(401).send("Unauthorized");
     });
 
   var queryText = 'INSERT INTO public.pending_transactions VALUES ($1, $2, $3, $4, $5, $6)';
