@@ -47,7 +47,9 @@ app.post('/create_transaction', jsonParser, function(request, response) {
     client.query(queryText, [transactionID, userID, clientID, itemID, quantity, bread], function (err, result) {
       if (err) response.sendStatus(500);
       else {
-          response.status(200).json({transaction_id : transactionID});
+          setTimeout(function() {
+              response.status(200).json({transaction_id : transactionID});
+          }, 5000);
       }
     });
   });
