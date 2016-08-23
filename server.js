@@ -43,7 +43,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
 
     var queryText = 'INSERT INTO public.pending_transactions VALUES ($1, $2, $3, $4, $5, $6)';
 
-    print("Connecting to DB");
+    console.log("Connecting to DB");
 
     pg.connect(process.env.DATABASE_URL, function(err, client, done) {
         client.query(queryText, [transactionID, userID, clientID, itemID, quantity, bread], function (err, result) {
