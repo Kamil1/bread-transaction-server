@@ -33,9 +33,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
     var quantity      = request.body.quantity;
     var bread         = request.body.bread;
     var token         = request.body.user_token;
-
-    console.log(token);
-
+    
     firebase.auth().verifyIdToken(token).then(function(decodedToken) {
       userID = decodedToken.uid;
     }).catch (function (error) {
