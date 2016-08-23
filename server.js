@@ -41,15 +41,15 @@ app.post('/create_transaction', jsonParser, function(request, response) {
         return response.status(401).send("Unauthorized");
     });
 
-  var queryText = 'INSERT INTO public.pending_transactions VALUES ($1, $2, $3, $4, $5, $6)';
+    var queryText = 'INSERT INTO public.pending_transactions VALUES ($1, $2, $3, $4, $5, $6)';
 
-  pg.connect(process.env.DATABASE_URL, function(err, client, done) {
-    client.query(queryText, [transactionID, userID, clientID, itemID, quantity, bread], function (err, result) {
-      if (err) response.sendStatus(500);
-      else {
-          response.status(200).json({transaction_id : transactionID});
-      }
+    pg.connect(process.env.DATABASE_URL, function(err, client, done) {
+        client.query(queryText, [transactionID, userID, clientID, itemID, quantity, bread], function (err, result) {
+            if (err) response.sendStatus(500);
+            else {
+                response.status(200).json({transaction_id : transactionID});
+            }
+        });
     });
-  });
 
 });
