@@ -47,7 +47,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
     pg.connect(process.env.DATABASE_URL, function(err, client, done) {
         client.query(countPendingTransactions, [clientID], function(err, result) {
             if (err) return response.status(500).send("Internal Server Error");
-            if (results.rows[0].pending_transactions > 3) return response.status(429).send("Too Many Requests");
+            if (result.rows[0].pending_transactions > 3) return response.status(429).send("Too Many Requests");
         });
         client.query(queryText, [transactionID, userID, clientID, itemID, quantity, bread], function(err, result) {
             if (err) return response.status(500).send("Internal Server Error");
