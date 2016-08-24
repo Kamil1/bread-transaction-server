@@ -39,13 +39,15 @@ app.post('/create_transaction', jsonParser, function(request, response) {
     }).catch (function (error) {
         console.log(error);
         console.log("Should get back unauthorized message");
-        return response.status(401).send("Unauthorized");
+        return response.status(401).send("Unauthorized eyy lmao");
     });
 
-    var countPendingTransactions = "SELECT COUNT(*) AS pending_transactions FROM public.pending_transactions WHERE user_id = $1 AND created + 90 >= EXTRACT(EPOCH FROM NOW())";
-    var queryText = 'INSERT INTO public.pending_transactions VALUES ($1, $2, $3, $4, $5, $6)';
+    console.log("test");
 
     pg.connect(process.env.DATABASE_URL, function(err, client, done) {
+        var countPendingTransactions = "SELECT COUNT(*) AS pending_transactions FROM public.pending_transactions WHERE user_id = $1 AND created + 90 >= EXTRACT(EPOCH FROM NOW())";
+        var queryText = 'INSERT INTO public.pending_transactions VALUES ($1, $2, $3, $4, $5, $6)';
+
         client.query(countPendingTransactions, [clientID], function(err, result) {
             if (err) return response.status(500).send("Internal Server Error");
             if (result.rows[0].pending_transactions > 3) return response.status(429).send("Too Many Requests");
