@@ -38,10 +38,11 @@ app.post('/create_transaction', jsonParser, function(request, response) {
       userID = decodedToken.uid;
     }).catch (function (error) {
         console.log(error);
+        console.log("Should get back unauthorized message");
         return response.status(401).send("Unauthorized");
     });
 
-    var countPendingTransactions = "SELECT COUNT(*) AS pending_transactions FROM public.pending_transactions WHERE user_id = $1 AND created + INTERVAL '1 minute' >= NOW()";
+    var countPendingTransactions = "SELECT COUNT(*) AS pending_transactions FROM public.pending_transactions WHERE user_id = $1 AND created + 90 >= EXTRACT(EPOCH FROM NOW())";
     var queryText = 'INSERT INTO public.pending_transactions VALUES ($1, $2, $3, $4, $5, $6)';
 
     pg.connect(process.env.DATABASE_URL, function(err, client, done) {
@@ -66,13 +67,29 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
         client.query(queryText,  [transactionID], function(err, result) {
             if (err) return reponse.status(500).send("Internal Server Error");
             var row = resuls.rows[0];
+
+            var now = Date.now().getTime() / 1000;
+            var created_datetime = row.created_datetime;
+
+            if (now - created_datetime > 90) return response.status(410).send("Gone: Transaction Expired");
+
             var clientID = row.client_id;
             var item = row.item_id;
             var quantity = row.quantity;
             var bread = row.bread;
-            var created = row.created;
+            var userID = row.user_id;
 
-            // check to see if transaction is expired
+            var pantry = firebase.database().ref('users/' + userID + 'pantry/bread_balance');
+            pantry.transaction(function(currentBalance) {
+                if (currentBalance < bread) return;
+                return currentBalance - bread;
+            }, function(error, committed, snapshot) {
+                if (error) {
+                    return response.status(500).send
+                }
+            });
+
+
             // check if user is "locked" -- if so, place listener and wait until
         })
     })
