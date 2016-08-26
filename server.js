@@ -67,6 +67,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
                 done();
 
                 if (err) {
+                    console.log("select");
                     response.status(500).json({error: "Internal Server Error"});
                     return;
                 }
@@ -87,6 +88,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
                 done();
 
                 if (err) {
+                    console.log("insert");
                     response.status(500).json({error: "Internal Server Error"});
                     return;
                 }
