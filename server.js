@@ -62,7 +62,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
 
     function setupTransaction() {
         console.log("setting up transaction");
-        pool.connect(process.env.DATABASE_URL, function (err, client, done) {
+        pool.connect(function (err, client, done) {
             var countPendingTransactions = "SELECT COUNT(*) AS pending_transactions FROM public.pending_transactions WHERE user_id = $1 AND created + 90 >= EXTRACT(EPOCH FROM NOW())";
             client.query(countPendingTransactions, [clientID], function (err, result) {
                 done();
@@ -82,7 +82,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
 
     function createPendingTransaction() {
         console.log("creating pending transaction");
-        pool.connect(process.env.DATABASE_URL, function (err, client, done) {
+        pool.connect(function (err, client, done) {
             var insertPendingTransaction = 'INSERT INTO public.pending_transactions VALUES ($1, $2, $3, $4, $5, $6)';
             client.query(insertPendingTransaction, [transactionID, userID, clientID, itemID, quantity, bread], function (err, result) {
                 done();
