@@ -48,7 +48,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
     var quantity      = request.body.quantity;
     var bread         = request.body.bread;
     var token         = request.body.user_token;
-    userID        = getUserIdFrom(token);
+    userID            = getUserIdFrom(token);
 
     function setupTransaction() {
         pool.connect(process.env.DATABASE_URL, function (err, client, done) {
@@ -107,7 +107,10 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
             client.query(insertTransaction, [transactionID], function(err) {
                 done();
 
-                if (err) throw err;
+                if (err) {
+                    response.status(500).json({error: "Internal Server Error"});
+                    return;
+                }
                 deletePendingTransaction();
             })
         })
@@ -119,7 +122,10 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
             client.query(deletePendingTransaction, [transactionID], function(err) {
                 done();
 
-                if (err) throw err;
+                if (err) {
+                    response.status(500).json({error: "Internal Server Error"});
+                    return;
+                }
             })
         })
     }
