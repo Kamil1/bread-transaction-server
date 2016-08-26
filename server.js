@@ -51,6 +51,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
     userID            = getUserIdFrom(token);
 
     function setupTransaction() {
+        console.log("setting up transaction");
         pool.connect(process.env.DATABASE_URL, function (err, client, done) {
             var countPendingTransactions = "SELECT COUNT(*) AS pending_transactions FROM public.pending_transactions WHERE user_id = $1 AND created + 90 >= EXTRACT(EPOCH FROM NOW())";
             client.query(countPendingTransactions, [clientID], function (err, result) {
@@ -70,6 +71,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
     }
 
     function createPendingTransaction() {
+        console.log("creating pending transaction");
         pool.connect(process.env.DATABASE_URL, function (err, client, done) {
             var insertPendingTransaction = 'INSERT INTO public.pending_transactions VALUES ($1, $2, $3, $4, $5, $6)';
             client.query(insertPendingTransaction, [transactionID, userID, clientID, itemID, quantity, bread], function (err, result) {
@@ -84,9 +86,11 @@ app.post('/create_transaction', jsonParser, function(request, response) {
         });
     }
 
+    console.log("checking user id");
     if (userID === null) {
         response.status(401).json({error: "Unauthorized"});
     } else {
+        console.log("user legit");
         setupTransaction();
     }
 
