@@ -18,7 +18,6 @@ var poolConfig = {
     host: pgParams.hostname,
     port: pgParams.port,
     database: pgParams.pathname.split('/')[1],
-    ssl: true,
     max: 10
 };
 
