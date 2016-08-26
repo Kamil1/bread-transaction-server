@@ -8,15 +8,25 @@ var app = express();
 var port = process.env.PORT || 8081;
 var jsonParser = bodyParser.json();
 
-firebase.initializeApp({
-  serviceAccount: 'conf/firebase_service_account_credentials.json',
-  databaseURL: 'https://bread-e6858.firebaseio.com'
-});
+var pgParams = url.parse(process.env.DATABASE_URL);
+var pgAuth   = pgParams.auth.split(':');
 
 var poolConfig = {
+    user: pgAuth[0],
+    password: pgAuth[1],
+    host: pgParams.hostname,
+    port: pgParams.port,
+    database: pgParams.pathname.split('/')[1],
+    ssl: true,
     max: 10
 };
+
 var pool = new pg.Pool(poolConfig);
+
+firebase.initializeApp({
+    serviceAccount: 'conf/firebase_service_account_credentials.json',
+    databaseURL: 'https://bread-e6858.firebaseio.com'
+});
 
 function getUserIdFrom(token) {
     firebase.auth().verifyIdToken(token).then(function(decodedToken) {
