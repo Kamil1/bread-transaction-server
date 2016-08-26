@@ -5,10 +5,6 @@ var pg = require('pg');
 var uuid = require('uuid');
 var url = require('url');
 
-var app = express();
-var port = process.env.PORT || 8081;
-var jsonParser = bodyParser.json();
-
 var pgParams = url.parse(process.env.DATABASE_URL);
 var pgAuth   = pgParams.auth.split(':');
 
@@ -23,20 +19,14 @@ var poolConfig = {
 
 var pool = new pg.Pool(poolConfig);
 
+var app = express();
+var port = process.env.PORT || 8081;
+var jsonParser = bodyParser.json();
+
 firebase.initializeApp({
     serviceAccount: 'conf/firebase_service_account_credentials.json',
     databaseURL: 'https://bread-e6858.firebaseio.com'
 });
-
-function getUserIdFrom(token) {
-    firebase.auth().verifyIdToken(token).then(function(decodedToken) {
-        userID = decodedToken.uid;
-        return userID;
-    }).catch (function (error) {
-        console.log(error);
-        return null;
-    });
-}
 
 app.use(bodyParser.json());
 
@@ -52,15 +42,13 @@ app.listen(port, function() {
 app.post('/create_transaction', jsonParser, function(request, response) {
     if (!request.body) return response.status(400).json({error: "Bad Request"});
     var transactionID = uuid.v4();
-    var userID        = "";
     var clientID      = request.body.client_id;
     var itemID        = request.body.item;
     var quantity      = request.body.quantity;
     var bread         = request.body.bread;
     var token         = request.body.user_token;
-    userID            = getUserIdFrom(token);
 
-    function setupTransaction() {
+    function setupTransaction(userID) {
         pool.connect(function (err, client, done) {
             var countPendingTransactions = "SELECT COUNT(*) AS pending_transactions FROM public.pending_transactions WHERE user_id = $1 AND created_datetime + 90 >= EXTRACT(EPOCH FROM NOW())";
             client.query(countPendingTransactions, [userID], function (err, result) {
@@ -75,12 +63,12 @@ app.post('/create_transaction', jsonParser, function(request, response) {
                     response.status(429).json({error: "Too Many Requests"});
                     return;
                 }
-                createPendingTransaction()
+                createPendingTransaction(userID)
             });
         });
     }
 
-    function createPendingTransaction() {
+    function createPendingTransaction(userID) {
         console.log("creating pending transaction");
         pool.connect(function (err, client, done) {
             var insertPendingTransaction = 'INSERT INTO public.pending_transactions VALUES ($1, $2, $3, $4, $5, $6)';
@@ -97,11 +85,12 @@ app.post('/create_transaction', jsonParser, function(request, response) {
         });
     }
 
-    if (userID === null) {
+    firebase.auth().verifyIdToken(token).then(function(decodedToken) {
+        setupTransaction(decodedToken.uid);
+    }).catch(function(error) {
+        console.log(error);
         response.status(401).json({error: "Unauthorized"});
-    } else {
-        setupTransaction();
-    }
+    });
 
 });
 
@@ -112,7 +101,6 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
     }
     var transactionID = request.body.transaction_id;
     var token         = request.body.user_token;
-    var tokenUserID   = getUserIdFrom(token);
 
     function invoiceTransaction() {
         pool.connect(process.env.DATA_URL, function(err, client, done) {
@@ -143,65 +131,70 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
         })
     }
 
-    if (tokenUserID === null) {
+    firebase.auth().verifyIdToken(token).then(function(decodedToken) {
+        executeTransaction(decodedToken.uid);
+    }).catch(function(error) {
+        console.log(error);
         response.status(401).json({error: "Unauthorized"});
-        return;
+    });
+
+    function executeTransaction(tokenUserID) {
+        pool.connect(process.env.DATA_URL, function(err, client, done) {
+            var selectTransaction = 'SELECT * FROM public.pending_transactions WHERE transaction_id = $1';
+            client.query(selectTransaction, [transactionID], function(err, result) {
+                done();
+
+                if (err) {
+                    response.status(500).json({error: "Internal Server Error"});
+                    return;
+                }
+                var row = result.rows[0];
+
+                var now = Date.now().getTime() / 1000;
+                var created_datetime = row.created_datetime;
+
+                if (now - created_datetime > 90) {
+                    response.status(410).json({error: "Gone: Transaction Expired"});
+                    return;
+                }
+
+                var clientID = row.client_id;
+                var item = row.item_id;
+                var quantity = row.quantity;
+                var bread = row.bread;
+                var userID = row.user_id;
+
+                if (userID != tokenUserID) {
+                    response.status(401).json({error: "Unauthorized"});
+                    return;
+                }
+
+                var userPantry = firebase.database().ref('users/' + userID + '/pantry/bread_balance');
+                userPantry.transaction(function(currentBalance) {
+                    if (currentBalance < bread) return;
+                    return currentBalance - bread;
+                }, function(error, committed) {
+                    if (error) {
+                        response.status(500).json({error: "Internal Server Error"});
+                    } else if (!committed) {
+                        response.status(200).json({result: "Insufficient Funds"});
+                    } else {
+                        var userItem = firebase.database().ref('users/' + userID + '/clients/' + clientID + '/' + item);
+                        userItem.transaction(function(currentItem) {
+                            if (currentItem === null) return quantity;
+                            return currentItem + quantity;
+                        }, function(error) {
+                            if (error) {
+                                response.status(500).json({error: "Internal Server Error"});
+                            } else {
+                                invoiceTransaction();
+                                response.status(200).json({result: "Transaction Completed Successfully"});
+                            }
+                        })
+                    }
+                });
+            })
+        })
     }
 
-    pool.connect(process.env.DATA_URL, function(err, client, done) {
-        var selectTransaction = 'SELECT * FROM public.pending_transactions WHERE transaction_id = $1';
-        client.query(selectTransaction, [transactionID], function(err, result) {
-            done();
-
-            if (err) {
-                response.status(500).json({error: "Internal Server Error"});
-                return;
-            }
-            var row = result.rows[0];
-
-            var now = Date.now().getTime() / 1000;
-            var created_datetime = row.created_datetime;
-
-            if (now - created_datetime > 90) {
-                response.status(410).json({error: "Gone: Transaction Expired"});
-                return;
-            }
-
-            var clientID = row.client_id;
-            var item = row.item_id;
-            var quantity = row.quantity;
-            var bread = row.bread;
-            var userID = row.user_id;
-
-            if (userID != tokenUserID) {
-                response.status(401).json({error: "Unauthorized"});
-                return;
-            }
-
-            var userPantry = firebase.database().ref('users/' + userID + '/pantry/bread_balance');
-            userPantry.transaction(function(currentBalance) {
-                if (currentBalance < bread) return;
-                return currentBalance - bread;
-            }, function(error, committed) {
-                if (error) {
-                    response.status(500).json({error: "Internal Server Error"});
-                } else if (!committed) {
-                    response.status(200).json({result: "Insufficient Funds"});
-                } else {
-                    var userItem = firebase.database().ref('users/' + userID + '/clients/' + clientID + '/' + item);
-                    userItem.transaction(function(currentItem) {
-                        if (currentItem === null) return quantity;
-                        return currentItem + quantity;
-                    }, function(error) {
-                        if (error) {
-                            response.status(500).json({error: "Internal Server Error"});
-                        } else {
-                            invoiceTransaction();
-                            response.status(200).json({result: "Transaction Completed Successfully"});
-                        }
-                    })
-                }
-            });
-        })
-    })
 });
