@@ -63,7 +63,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
     function setupTransaction() {
         pool.connect(function (err, client, done) {
             var countPendingTransactions = "SELECT COUNT(*) AS pending_transactions FROM public.pending_transactions WHERE user_id = $1 AND created_datetime + 90 >= EXTRACT(EPOCH FROM NOW())";
-            client.query(countPendingTransactions, [clientID], function (err, result) {
+            client.query(countPendingTransactions, [userID], function (err, result) {
                 done();
 
                 if (err) {
