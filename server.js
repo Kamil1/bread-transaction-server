@@ -103,7 +103,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
     var token         = request.body.user_token;
 
     function invoiceTransaction() {
-        pool.connect(process.env.DATA_URL, function(err, client, done) {
+        pool.connect(function(err, client, done) {
             var insertTransaction = 'INSERT INTO public.transactions SELECT transaction_id, user_id, client_id, item_id, quantity, bread FROM pending_transactions WHERE transaction_id = $1';
             client.query(insertTransaction, [transactionID], function(err, result) {
                 done();
@@ -118,7 +118,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
     }
 
     function deletePendingTransaction() {
-        pool.connect(process.env.DATA_URL, function(err, client, done) {
+        pool.connect(function(err, client, done) {
             var deletePendingTransaction = 'DELETE FROM public.transaction WHERE transaction_id = $1';
             client.query(deletePendingTransaction, [transactionID], function(err, result) {
                 done();
@@ -139,7 +139,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
     });
 
     function executeTransaction(tokenUserID) {
-        pool.connect(process.env.DATA_URL, function(err, client, done) {
+        pool.connect(function(err, client, done) {
             var selectTransaction = 'SELECT * FROM public.pending_transactions WHERE transaction_id = $1';
             client.query(selectTransaction, [transactionID], function(err, result) {
                 done();
