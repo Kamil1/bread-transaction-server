@@ -177,6 +177,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                     if (error) {
                         response.status(500).json({error: "Internal Server Error"});
                     } else if (!committed) {
+                        // TODO: Provide result codes as seperate field in response json for easier parsing
                         response.status(200).json({result: "Insufficient Funds"});
                     } else {
                         var userItem = firebase.database().ref('users/' + userID + '/clients/' + clientID + '/' + item);
