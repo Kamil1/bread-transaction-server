@@ -109,6 +109,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                 done();
 
                 if (err) {
+                    console.log("Error recording transaction");
                     response.status(500).json({error: "Internal Server Error"});
                     return;
                 }
@@ -124,9 +125,12 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                 done();
 
                 if (err) {
+                    console.log("Error deleting pending transaction");
                     response.status(500).json({error: "Internal Server Error"});
                     return;
                 }
+                console.log("Transaction Successfully Completed");
+                response.status(200).json({result: "Transaction Successfully Completed"});
             })
         })
     }
@@ -174,21 +178,25 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                     }
                 }, function(error, committed) {
                     if (error) {
+                        console.log("Error accessing user pantry");
                         response.status(500).json({error: "Internal Server Error"});
                     } else if (!committed) {
                         // TODO: Provide result codes as seperate field in response json for easier parsing
+                        console.log("Pantry transaction not committed");
                         response.status(200).json({result: "Insufficient Funds"});
                     } else {
                         var userItem = firebase.database().ref('users/' + userID + '/clients/' + clientID + '/' + item);
+                        console.log("Crediting user items");
                         userItem.transaction(function(currentItem) {
                             if (currentItem === null) return quantity;
                             return currentItem + quantity;
                         }, function(error) {
                             if (error) {
+                                console.log("error creditting item to user account");
                                 response.status(500).json({error: "Internal Server Error"});
                             } else {
+                                console.log("Invoicing transaction");
                                 invoiceTransaction();
-                                response.status(200).json({result: "Transaction Completed Successfully"});
                             }
                         })
                     }
