@@ -167,7 +167,11 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                 var userPantry = firebase.database().ref(breadBalancePath);
                 userPantry.transaction(function(currentBalance) {
                     console.log("The current balance is: " + currentBalance);
-                    if (currentBalance >= bread) return currentBalance - bread;
+                    if (currentBalance >= bread) {
+                        return currentBalance - bread;
+                    } else {
+                        return currentBalance;
+                    }
                 }, function(error, committed) {
                     if (error) {
                         response.status(500).json({error: "Internal Server Error"});
