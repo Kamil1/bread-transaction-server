@@ -162,7 +162,8 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                     return;
                 }
 
-                var breadBalancePath = 'users/' + userID + '/pantry/bread_balance';  
+                var breadBalancePath = 'users/' + userID + '/pantry/bread_balance';
+                console.log(breadBalancePath);
                 var userPantry = firebase.database().ref(breadBalancePath);
                 userPantry.transaction(function(currentBalance) {
                     console.log("The current balance is: " + currentBalance);
