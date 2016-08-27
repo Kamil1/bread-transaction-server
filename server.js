@@ -150,7 +150,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                 }
                 var row = result.rows[0];
 
-                var now = Date.now().getTime() / 1000;
+                var now = (new Date).getTime() / 1000;
                 var created_datetime = row.created_datetime;
 
                 if (now - created_datetime > 90) {
