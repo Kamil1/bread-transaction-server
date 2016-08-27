@@ -131,12 +131,12 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
         })
     }
 
-    firebase.auth().verifyIdToken(token).then(function(decodedToken) {
-        executeTransaction(decodedToken.uid);
-    }).catch(function(error) {
-        console.log(error);
-        response.status(401).json({error: "Unauthorized"});
-    });
+
+
+
+
+
+
 
     function executeTransaction(tokenUserID) {
         pool.connect(function(err, client, done) {
@@ -171,6 +171,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
 
                 var userPantry = firebase.database().ref('users/' + userID + '/pantry/bread_balance');
                 userPantry.transaction(function(currentBalance) {
+                    console.log("The current balance is: " + currentBalance);
                     if (currentBalance < bread) return;
                     return currentBalance - bread;
                 }, function(error, committed) {
@@ -197,5 +198,12 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
             })
         })
     }
+   
+    firebase.auth().verifyIdToken(token).then(function(decodedToken) {
+        executeTransaction(decodedToken.uid);
+    }).catch(function(error) {
+        console.log(error);
+        response.status(401).json({error: "Unauthorized"});
+    });
 
 });
