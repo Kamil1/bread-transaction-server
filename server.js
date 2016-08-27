@@ -131,13 +131,6 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
         })
     }
 
-
-
-
-
-
-
-
     function executeTransaction(tokenUserID) {
         pool.connect(function(err, client, done) {
             var selectTransaction = 'SELECT * FROM public.pending_transactions WHERE transaction_id = $1';
@@ -169,7 +162,8 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                     return;
                 }
 
-                var userPantry = firebase.database().ref('users/' + userID + '/pantry/bread_balance');
+                var breadBalancePath = 'users/' + userID + '/pantry/bread_balance';  
+                var userPantry = firebase.database().ref(breadBalancePath);
                 userPantry.transaction(function(currentBalance) {
                     console.log("The current balance is: " + currentBalance);
                     if (currentBalance < bread) return;
