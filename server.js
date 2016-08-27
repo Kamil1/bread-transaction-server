@@ -166,17 +166,17 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                     return;
                 }
 
-                var breadBalancePath = 'users/' + userID + '/pantry/bread_balance';
-                console.log(breadBalancePath);
-                var userPantry = firebase.database().ref(breadBalancePath);
+                var beginningBalance = 0;
+                var userPantry = firebase.database().ref('users/' + userID + '/pantry/bread_balance');
                 userPantry.transaction(function(currentBalance) {
                     console.log("The current balance is: " + currentBalance);
+                    beginningBalance = currentBalance;
                     if (currentBalance >= bread) {
                         return currentBalance - bread;
                     } else {
                         return currentBalance;
                     }
-                }, function(error, committed) {
+                }, function(error, committed, snapshot) {
                     if (error) {
                         console.log("Error accessing user pantry");
                         response.status(500).json({error: "Internal Server Error"});
@@ -185,6 +185,13 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                         console.log("Pantry transaction not committed");
                         response.status(200).json({result: "Insufficient Funds"});
                     } else {
+
+                        if (beginningBalance == snapshot.val()) {
+                            console.log("Insufficient funds");
+                            response.status(200).json({result: "Insufficient Funds"});
+                            return;
+                        }
+
                         var userItem = firebase.database().ref('users/' + userID + '/clients/' + clientID + '/' + item);
                         console.log("Crediting user items");
                         userItem.transaction(function(currentItem) {
