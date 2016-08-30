@@ -110,7 +110,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
 
     function createTransaction(userID) {
 
-        function setupTransaction() {
+        function setupTransaction(client, done) {
             var countPendingTransactions = "SELECT COUNT(*) AS pending_transactions FROM public.pending_transaction WHERE user_id = $1 AND created_datetime + 90 >= EXTRACT(EPOCH FROM NOW())";
             client.query(countPendingTransactions, [userID], function (err, result) {
 
@@ -123,11 +123,11 @@ app.post('/create_transaction', jsonParser, function(request, response) {
                     response.status(429).json({error: "Too Many Requests"});
                     return;
                 }
-                createPendingTransaction()
+                createPendingTransaction(client, done)
             });
         }
 
-        function createPendingTransaction() {
+        function createPendingTransaction(client, done) {
             var insertPendingTransaction = 'INSERT INTO public.pending_transaction VALUES ($1, $2, $3, $4, $5, $6)';
             client.query(insertPendingTransaction, [transactionID, userID, clientID, itemID, quantity, bread], function (err, result) {
                 done();
@@ -141,8 +141,9 @@ app.post('/create_transaction', jsonParser, function(request, response) {
             });
         }
 
-
-        setupTransaction();
+        pool.connect(function(err, client, done) {
+            setupTransaction(client, done);
+        });
     }
 
     firebase.auth().verifyIdToken(token).then(function(decodedToken) {
