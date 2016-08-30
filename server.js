@@ -23,7 +23,7 @@ var app = express();
 var port = process.env.PORT || 8081;
 var jsonParser = bodyParser.json();
 
-function transferPendingTransaction(transactionID, callback) {
+function transferPendingTransaction(transactionID, query) {
 
     function checkTransaction(client, done) {
         var checkTransaction = 'SELECT COUNT(*) AS pending_transactions FROM public.pending_transaction WHERE transaction_id = $1';
@@ -53,6 +53,7 @@ function transferPendingTransaction(transactionID, callback) {
                 response.status(500).json({error: "Internal Server Error"});
                 return;
             }
+
             deletePendingTransaction(client, done);
         });
     }
@@ -67,13 +68,14 @@ function transferPendingTransaction(transactionID, callback) {
                 response.status(500).json({error: "Internal Server Error"});
                 return;
             }
+
             console.log("Deleted pending transaction");
-            callback();
+            query();
         })
     }
 
     pool.connect(function(err, client, done) {
-        transferTransaction(client, done);
+        checkTransaction(client, done);
     })
 
 }
@@ -106,11 +108,11 @@ app.post('/create_transaction', jsonParser, function(request, response) {
     var bread         = request.body.bread;
     var token         = request.body.user_token;
 
-    function setupTransaction(userID) {
-        pool.connect(function (err, client, done) {
+    function createTransaction(userID) {
+
+        function setupTransaction() {
             var countPendingTransactions = "SELECT COUNT(*) AS pending_transactions FROM public.pending_transaction WHERE user_id = $1 AND created_datetime + 90 >= EXTRACT(EPOCH FROM NOW())";
             client.query(countPendingTransactions, [userID], function (err, result) {
-                done();
 
                 if (err) {
                     console.log("select");
@@ -121,13 +123,11 @@ app.post('/create_transaction', jsonParser, function(request, response) {
                     response.status(429).json({error: "Too Many Requests"});
                     return;
                 }
-                createPendingTransaction(userID)
+                createPendingTransaction()
             });
-        });
-    }
+        }
 
-    function createPendingTransaction(userID) {
-        pool.connect(function (err, client, done) {
+        function createPendingTransaction() {
             var insertPendingTransaction = 'INSERT INTO public.pending_transaction VALUES ($1, $2, $3, $4, $5, $6)';
             client.query(insertPendingTransaction, [transactionID, userID, clientID, itemID, quantity, bread], function (err, result) {
                 done();
@@ -139,11 +139,14 @@ app.post('/create_transaction', jsonParser, function(request, response) {
                 }
                 response.status(200).json({transaction_id: transactionID});
             });
-        });
+        }
+
+
+        setupTransaction();
     }
 
     firebase.auth().verifyIdToken(token).then(function(decodedToken) {
-        setupTransaction(decodedToken.uid);
+        createTransaction(decodedToken.uid);
     }).catch(function(error) {
         console.log(error);
         response.status(401).json({error: "Unauthorized"});
@@ -161,19 +164,17 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
     var token         = request.body.user_token;
 
     function invoiceTransaction() {
-        pool.connect(function(err, client, done) {
-            var insertTransaction = 'INSERT INTO public.fulfilled_transaction VALUES ($1)';
-            client.query(insertTransaction, [transactionID], function(err, result) {
-                done();
+        var insertTransaction = 'INSERT INTO public.fulfilled_transaction VALUES ($1)';
+        client.query(insertTransaction, [transactionID], function(err, result) {
+            done();
 
-                if (err) {
-                    console.log("Error recording transaction");
-                    response.status(500).json({error: "Internal Server Error"});
-                    return;
-                }
-                console.log("Transaction Successfully Completed");
-                response.status(200).json({result: "Transaction Successfully Completed"});
-            })
+            if (err) {
+                console.log("Error recording transaction");
+                response.status(500).json({error: "Internal Server Error"});
+                return;
+            }
+            console.log("Transaction Successfully Completed");
+            response.status(200).json({result: "Transaction Successfully Completed"});
         })
     }
 
