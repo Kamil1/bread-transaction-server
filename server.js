@@ -23,7 +23,7 @@ var app = express();
 var port = process.env.PORT || 8081;
 var jsonParser = bodyParser.json();
 
-function transferPendingTransaction(transactionID, query) {
+function transferPendingTransaction(transactionID, query, response) {
 
     function checkTransaction(client, done) {
         var checkTransaction = 'SELECT COUNT(*) AS pending_transactions FROM public.pending_transaction WHERE transaction_id = $1';
@@ -36,6 +36,7 @@ function transferPendingTransaction(transactionID, query) {
             }
 
             if (result.rows[0].pending_transactions !== 1) {
+                console.log("Actual count of pending transactions: " + result.rows[0].pending_transactions);
                 response.status(404).json({error: "Not Found"});
                 return;
             }
@@ -247,7 +248,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                                 response.status(500).json({error: "Internal Server Error"});
                             } else {
                                 console.log("Invoicing transaction");
-                                transferPendingTransaction(transactionID, invoiceTransaction);
+                                transferPendingTransaction(transactionID, invoiceTransaction, response);
                             }
                         })
                     }
@@ -292,7 +293,7 @@ app.post('/cancel_transaction', jsonParser, function(request, response) {
     }
 
     firebase.auth().verifyIdToken(token).then(function(decodedToken) {
-        transferPendingTransaction(transactionID, cancel_transaction);
+        transferPendingTransaction(transactionID, cancel_transaction, response);
     }).catch(function(error) {
         console.log(error);
         response.status(401).json({error: "Unauthorized"});
