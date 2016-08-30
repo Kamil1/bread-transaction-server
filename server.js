@@ -23,6 +23,61 @@ var app = express();
 var port = process.env.PORT || 8081;
 var jsonParser = bodyParser.json();
 
+function transferPendingTransaction(transactionID, callback) {
+
+    function checkTransaction(client, done) {
+        var checkTransaction = 'SELECT COUNT(*) AS pending_transactions FROM public.pending_transaction WHERE transaction_id = $1';
+        client.query(checkTransaction, [transactionID], function (err, result) {
+
+            if (err) {
+                console.log("insert: " + err);
+                response.status(500).json({error: "Internal Server Error"});
+                return;
+            }
+
+            if (result.rows[0].pending_transactions !== 1) {
+                response.status(404).json({error: "Not Found"});
+                return;
+            }
+
+            transferTransaction(client, done);
+        });
+    }
+
+    function transferTransaction(client, done) {
+        var transferTransaction = 'INSERT INTO public.transaction SELECT transaction_id, user_id, client_id, item_id, quantity, bread, to_timestamp(created_datetime) AS created_datetime FROM public.pending_transaction WHERE transaction_id = $1';
+        client.query(transferTransaction, [transactionID], function (err, result) {
+
+            if (err) {
+                console.log("insert: " + err);
+                response.status(500).json({error: "Internal Server Error"});
+                return;
+            }
+            deletePendingTransaction(client, done);
+        });
+    }
+
+    function deletePendingTransaction(client, done) {
+        var deletePendingTransaction = 'DELETE FROM public.pending_transaction WHERE transaction_id = $1';
+        client.query(deletePendingTransaction, [transactionID], function (err, result) {
+            done();
+
+            if (err) {
+                console.log("Error deleting pending transaction");
+                response.status(500).json({error: "Internal Server Error"});
+                return;
+            }
+            console.log("Deleted pending transaction");
+            callback();
+        })
+    }
+
+    pool.connect(function(err, client, done) {
+        transferTransaction(client, done);
+    })
+
+}
+
 firebase.initializeApp({
     serviceAccount: 'conf/firebase_service_account_credentials.json',
     databaseURL: 'https://bread-e6858.firebaseio.com'
@@ -40,7 +95,10 @@ app.listen(port, function() {
 });
 
 app.post('/create_transaction', jsonParser, function(request, response) {
-    if (!request.body) return response.status(400).json({error: "Bad Request"});
+    if (!request.body) {
+        response.status(400).json({error: "Bad Request"});
+        return;
+    }
     var transactionID = uuid.v4();
     var clientID      = request.body.client_id;
     var itemID        = request.body.item;
@@ -63,24 +121,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
                     response.status(429).json({error: "Too Many Requests"});
                     return;
                 }
-                createTransaction(userID)
-            });
-        });
-    }
-
-    function createTransaction(userID) {
-        console.log("creating transaction");
-        pool.connect(function (err, client, done) {
-            var insertPendingTransaction = 'INSERT INTO public.transaction VALUES ($1, $2, $3, $4, $5, $6)';
-            client.query(insertPendingTransaction, [transactionID, userID, clientID, itemID, quantity, bread], function (err, result) {
-                done();
-
-                if (err) {
-                    console.log("insert: " + err);
-                    response.status(500).json({error: "Internal Server Error"});
-                    return;
-                }
-                createPendingTransaction(userID);
+                createPendingTransaction(userID)
             });
         });
     }
@@ -115,6 +156,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
         response.status(400).json({error: "Bad Request"});
         return;
     }
+
     var transactionID = request.body.transaction_id;
     var token         = request.body.user_token;
 
@@ -126,22 +168,6 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
 
                 if (err) {
                     console.log("Error recording transaction");
-                    response.status(500).json({error: "Internal Server Error"});
-                    return;
-                }
-                deletePendingTransaction();
-            })
-        })
-    }
-
-    function deletePendingTransaction() {
-        pool.connect(function(err, client, done) {
-            var deletePendingTransaction = 'DELETE FROM public.pending_transaction WHERE transaction_id = $1';
-            client.query(deletePendingTransaction, [transactionID], function(err, result) {
-                done();
-
-                if (err) {
-                    console.log("Error deleting pending transaction");
                     response.status(500).json({error: "Internal Server Error"});
                     return;
                 }
@@ -219,7 +245,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                                 response.status(500).json({error: "Internal Server Error"});
                             } else {
                                 console.log("Invoicing transaction");
-                                invoiceTransaction();
+                                transferPendingTransaction(transactionID, invoiceTransaction);
                             }
                         })
                     }
@@ -235,4 +261,38 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
         response.status(401).json({error: "Unauthorized"});
     });
 
+});
+
+app.post('/cancel_transaction', jsonParser, function(request, response) {
+    if (!request.body) {
+        response.status(400).json({error: "Bad Request"});
+        return;
+    }
+
+    var transactionID = request.body.transaction_id;
+    var token         = request.body.user_token;
+
+    function cancel_transaction() {
+        pool.connect(function(err, client, done) {
+            var cancelTransaction = "INSERT INTO public.cancelled_transaction VALUES ($1)";
+            client.query(cancelTransaction, [transactionID], function(err, result) {
+                done();
+
+                if (err) {
+                    console.log("Error recording cancelled transaction");
+                    response.status(500).json({error: "Internal Server Error"});
+                    return;
+                }
+                console.log("Transaction Successfully Cancelled");
+                response.status(200).json({result: "Transaction Successfully Cancelled"});
+            })
+        })
+    }
+
+    firebase.auth().verifyIdToken(token).then(function(decodedToken) {
+        transferPendingTransaction(transactionID, cancel_transaction);
+    }).catch(function(error) {
+        console.log(error);
+        response.status(401).json({error: "Unauthorized"});
+    })
 });
