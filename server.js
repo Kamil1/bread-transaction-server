@@ -50,7 +50,7 @@ app.post('/create_transaction', jsonParser, function(request, response) {
 
     function setupTransaction(userID) {
         pool.connect(function (err, client, done) {
-            var countPendingTransactions = "SELECT COUNT(*) AS pending_transactions FROM public.pending_transactions WHERE user_id = $1 AND created_datetime + 90 >= EXTRACT(EPOCH FROM NOW())";
+            var countPendingTransactions = "SELECT COUNT(*) AS pending_transactions FROM public.pending_transaction WHERE user_id = $1 AND created_datetime + 90 >= EXTRACT(EPOCH FROM NOW())";
             client.query(countPendingTransactions, [userID], function (err, result) {
                 done();
 
@@ -63,15 +63,31 @@ app.post('/create_transaction', jsonParser, function(request, response) {
                     response.status(429).json({error: "Too Many Requests"});
                     return;
                 }
-                createPendingTransaction(userID)
+                createTransaction(userID)
+            });
+        });
+    }
+
+    function createTransaction(userID) {
+        console.log("creating transaction");
+        pool.connect(function (err, client, done) {
+            var insertPendingTransaction = 'INSERT INTO public.transaction VALUES ($1, $2, $3, $4, $5, $6)';
+            client.query(insertPendingTransaction, [transactionID, userID, clientID, itemID, quantity, bread], function (err, result) {
+                done();
+
+                if (err) {
+                    console.log("insert: " + err);
+                    response.status(500).json({error: "Internal Server Error"});
+                    return;
+                }
+                createPendingTransaction(userID);
             });
         });
     }
 
     function createPendingTransaction(userID) {
-        console.log("creating pending transaction");
         pool.connect(function (err, client, done) {
-            var insertPendingTransaction = 'INSERT INTO public.pending_transactions VALUES ($1, $2, $3, $4, $5, $6)';
+            var insertPendingTransaction = 'INSERT INTO public.pending_transaction VALUES ($1, $2, $3, $4, $5, $6)';
             client.query(insertPendingTransaction, [transactionID, userID, clientID, itemID, quantity, bread], function (err, result) {
                 done();
 
@@ -104,7 +120,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
 
     function invoiceTransaction() {
         pool.connect(function(err, client, done) {
-            var insertTransaction = 'INSERT INTO public.transactions SELECT transaction_id, user_id, client_id, item_id, quantity, bread FROM pending_transactions WHERE transaction_id = $1';
+            var insertTransaction = 'INSERT INTO public.fulfilled_transaction VALUES ($1)';
             client.query(insertTransaction, [transactionID], function(err, result) {
                 done();
 
@@ -120,7 +136,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
 
     function deletePendingTransaction() {
         pool.connect(function(err, client, done) {
-            var deletePendingTransaction = 'DELETE FROM public.transaction WHERE transaction_id = $1';
+            var deletePendingTransaction = 'DELETE FROM public.pending_transaction WHERE transaction_id = $1';
             client.query(deletePendingTransaction, [transactionID], function(err, result) {
                 done();
 
@@ -137,7 +153,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
 
     function executeTransaction(tokenUserID) {
         pool.connect(function(err, client, done) {
-            var selectTransaction = 'SELECT * FROM public.pending_transactions WHERE transaction_id = $1';
+            var selectTransaction = 'SELECT * FROM public.pending_transaction WHERE transaction_id = $1';
             client.query(selectTransaction, [transactionID], function(err, result) {
                 done();
 
