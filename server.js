@@ -35,7 +35,7 @@ function transferPendingTransaction(transactionID, query, response) {
                 return;
             }
 
-            if (result.rows[0].pending_transactions !== 1) {
+            if (result.rows[0].pending_transactions != 1) {
                 console.log("Actual count of pending transactions: " + result.rows[0].pending_transactions);
                 response.status(404).json({error: "Not Found"});
                 return;
