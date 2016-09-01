@@ -105,6 +105,7 @@ function movePendingTransaction(transactionID, table, response, msg) {
             if (err) {
                 console.log("Error recording transaction");
                 console.log("Table: " + table);
+                console.log(err);
                 rollback(client, done);
                 response.status(500).json({error: "Internal Server Error"});
                 return;
