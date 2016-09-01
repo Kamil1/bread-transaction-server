@@ -105,8 +105,6 @@ function movePendingTransaction(transactionID, table, response, msg) {
 
             if (err) {
                 console.log("Error recording transaction");
-                console.log("Table: " + table);
-                console.log(err);
                 rollback(client, done);
                 response.status(500).json({error: "Internal Server Error"});
                 return;
@@ -127,7 +125,7 @@ function movePendingTransaction(transactionID, table, response, msg) {
 function expirePendingTransactions() {
 
     function moveExpiredTransactions(client, done) {
-        var moveExpiredTransactions = "INSERT INTO public.transaction SELECT transaction_id, user_id, client_id, item_id, quantity, bread, TO_TIMESTAMP(created_datetime) AT TIME ZONE 'UTC' AS created_datetime FROM public.pending_transaction WHERE EXTRACT(EPOCH FROM NOW()) - created_datettime > 90 RETURNING transaction_id";
+        var moveExpiredTransactions = "INSERT INTO public.transaction SELECT transaction_id, user_id, client_id, item_id, quantity, bread, TO_TIMESTAMP(created_datetime) AT TIME ZONE 'UTC' AS created_datetime FROM public.pending_transaction WHERE EXTRACT(EPOCH FROM NOW()) - created_datetime > 90 RETURNING transaction_id";
         client.query(moveExpiredTransactions, function(err, result) {
 
             if (err) {
