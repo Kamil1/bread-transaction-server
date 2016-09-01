@@ -100,8 +100,8 @@ function movePendingTransaction(transactionID, table, response, msg) {
     }
 
     function categorizeTransaction(client, done) {
-        var categorizeTransaction = 'INSERT INTO public.' + table + ' VALUES ($2)';
-        client.query(categorizeTransaction, [table, transactionID], function(err, result) {
+        var categorizeTransaction = 'INSERT INTO public.' + table + ' VALUES ($1)';
+        client.query(categorizeTransaction, [transactionID], function(err, result) {
 
             if (err) {
                 console.log("Error recording transaction");
