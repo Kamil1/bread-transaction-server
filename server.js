@@ -142,7 +142,7 @@ function expirePendingTransactions() {
 
             console.log("Moved expired pending transactions into transaction table");
 
-            deleteExpiredTransactions(transactionIds);
+            deleteExpiredTransactions(client, done, transactionIds);
         })
     }
 
