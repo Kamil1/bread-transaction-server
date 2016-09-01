@@ -59,6 +59,7 @@ function movePendingTransaction(transactionID, table, response, msg) {
 
             if (result.rows[0].pending_transactions != 1) {
                 console.log("Actual count of pending transactions: " + result.rows[0].pending_transactions);
+                // TODO: probably expired -- maybe change message to explain it? Would require querying expired transactions table...
                 response.status(404).json({error: "Not Found"});
                 return;
             }
@@ -99,7 +100,7 @@ function movePendingTransaction(transactionID, table, response, msg) {
     }
 
     function categorizeTransaction(client, done) {
-        var categorizeTransaction = 'INSERT INTO $1 VALUES ($2)';
+        var categorizeTransaction = 'INSERT INTO public.' + table + ' VALUES ($2)';
         client.query(categorizeTransaction, [table, transactionID], function(err, result) {
 
             if (err) {
@@ -330,7 +331,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                                 response.status(500).json({error: "Internal Server Error"});
                             } else {
                                 console.log("Invoicing transaction");
-                                movePendingTransaction(transactionID, "public.fulfilled_transaction", response, "Transaction Successfully Completed");
+                                movePendingTransaction(transactionID, "fulfilled_transaction", response, "Transaction Successfully Completed");
                             }
                         })
                     }
@@ -358,7 +359,7 @@ app.post('/cancel_transaction', jsonParser, function(request, response) {
     var token         = request.body.user_token;
 
     firebase.auth().verifyIdToken(token).then(function(decodedToken) {
-        movePendingTransaction(transactionID, "public.cancelled_transaction", response, "Transaction Successfully Cancelled");
+        movePendingTransaction(transactionID, "cancelled_transaction", response, "Transaction Successfully Cancelled");
     }).catch(function(error) {
         console.log(error);
         response.status(401).json({error: "Unauthorized"});
