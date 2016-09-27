@@ -4,6 +4,7 @@ var pg = require('pg');
 var uuid = require('uuid');
 var url = require('url');
 var request = require('request');
+var express = require('express');
 
 var pgParams = url.parse(process.env.DATABASE_URL);
 var pgAuth   = pgParams.auth.split(':');
