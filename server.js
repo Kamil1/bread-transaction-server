@@ -1,9 +1,9 @@
 var firebase = require('firebase');
 var bodyParser = require('body-parser');
-var express = require('express');
 var pg = require('pg');
 var uuid = require('uuid');
 var url = require('url');
+var request = require('request');
 
 var pgParams = url.parse(process.env.DATABASE_URL);
 var pgAuth   = pgParams.auth.split(':');
@@ -23,15 +23,17 @@ var app = express();
 var port = process.env.PORT || 8081;
 var jsonParser = bodyParser.json();
 
+var STATUS_SERVER = "https://bread-status-server.herokuapp.com/"
+
 var begin = function(client, done, query) {
     client.query('BEGIN', function(err) {
 
         if (err) {
             rollback(client, done);
-            return;
+            return false;
         }
 
-        query(client, done);
+        return query(client, done);
     })
 };
 
@@ -45,7 +47,7 @@ var rollback = function(client, done) {
     })
 };
 
-function movePendingTransaction(transactionID, table, response, msg) {
+function movePendingTransaction(transactionID, table, response, callback) {
 
     function checkTransaction(client, done) {
         var checkTransaction = 'SELECT COUNT(*) AS pending_transactions FROM public.pending_transaction WHERE transaction_id = $1';
@@ -112,7 +114,7 @@ function movePendingTransaction(transactionID, table, response, msg) {
 
             commit(client, done);
             console.log("Transaction Successfully Completed");
-            response.status(200).json({result: msg});
+            callback();
         })
     }
 
@@ -123,6 +125,7 @@ function movePendingTransaction(transactionID, table, response, msg) {
 }
 
 function expirePendingTransactions() {
+    //TODO: add to expired_transaction table
 
     function moveExpiredTransactions(client, done) {
         var moveExpiredTransactions = "INSERT INTO public.transaction SELECT transaction_id, user_id, client_id, item_id, quantity, bread, TO_TIMESTAMP(created_datetime) AT TIME ZONE 'UTC' AS created_datetime FROM public.pending_transaction WHERE EXTRACT(EPOCH FROM NOW()) - created_datetime > 90 RETURNING transaction_id";
@@ -170,12 +173,41 @@ function expirePendingTransactions() {
     })
 }
 
+function saveToFirebase(transactionID, clientID, itemID, quantity, bread, userID, timestamp, callback) {
+    var userRef = firebaseDB.ref("users/" + userID + "/transactions/");
+    var transactionRef = firebaseDB.ref("transactions");
+    userRef.set({
+        transactionID: {
+            client_id: clientID,
+            item_id: itemID,
+            "quantity": quantity,
+            "bread": bread,
+            "timestamp": timestamp
+        }
+    }, function() {
+        transactionRef.set({
+            transactionID: {
+                user_id: userID,
+                client_id: clientID,
+                item_id: itemID,
+                "quantity": quantity,
+                "bread": bread,
+                "timestamp": timestamp
+            }
+        }, function() {
+            callback();
+        });
+    });
+}
+
 setInterval(expirePendingTransactions, 300000);
 
 firebase.initializeApp({
     serviceAccount: 'conf/firebase_service_account_credentials.json',
     databaseURL: 'https://bread-e6858.firebaseio.com'
 });
+
+var firebaseDB = firebase.database();
 
 app.use(bodyParser.json());
 
@@ -193,9 +225,10 @@ app.post('/create_transaction', jsonParser, function(request, response) {
         response.status(400).json({error: "Bad Request"});
         return;
     }
+
     var transactionID = uuid.v4();
     var clientID      = request.body.client_id;
-    var itemID        = request.body.item;
+    var itemID        = request.body.item_id;
     var quantity      = request.body.quantity;
     var bread         = request.body.bread;
     var token         = request.body.user_token;
@@ -282,7 +315,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                 }
 
                 var clientID = row.client_id;
-                var item = row.item_id;
+                var itemID = row.item_id;
                 var quantity = row.quantity;
                 var bread = row.bread;
                 var userID = row.user_id;
@@ -293,7 +326,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                 }
 
                 var beginningBalance = 0;
-                var userPantry = firebase.database().ref('users/' + userID + '/pantry/bread_balance');
+                var userPantry = firebaseDB.ref('users/' + userID + '/pantry/bread_balance');
                 userPantry.transaction(function(currentBalance) {
                     console.log("The current balance is: " + currentBalance);
                     beginningBalance = currentBalance;
@@ -318,7 +351,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                             return;
                         }
 
-                        var userItem = firebase.database().ref('users/' + userID + '/clients/' + clientID + '/' + item);
+                        var userItem = firebaseDB.ref('users/' + userID + '/clients/' + clientID + '/' + itemID);
                         console.log("Crediting user items");
                         userItem.transaction(function(currentItem) {
                             if (currentItem === null) return quantity;
@@ -329,7 +362,11 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                                 response.status(500).json({error: "Internal Server Error"});
                             } else {
                                 console.log("Invoicing transaction");
-                                movePendingTransaction(transactionID, "fulfilled_transaction", response, "Transaction Successfully Completed");
+                                movePendingTransaction(transactionID, "fulfilled_transaction", response, function() {
+                                    saveToFirebase(transactionID, clientID, itemID, quantity, bread, userID, created_datetime, function() {
+                                        response.status(200).json({result: "Transaction Successfully Cancelled"});
+                                    });
+                                });
                             }
                         })
                     }
@@ -357,7 +394,9 @@ app.post('/cancel_transaction', jsonParser, function(request, response) {
     var token         = request.body.user_token;
 
     firebase.auth().verifyIdToken(token).then(function(decodedToken) {
-        movePendingTransaction(transactionID, "cancelled_transaction", response, "Transaction Successfully Cancelled");
+        movePendingTransaction(transactionID, "cancelled_transaction", response, function() {
+            response.status(200).json({result: "Transaction Successfully Cancelled"});
+        });
     }).catch(function(error) {
         console.log(error);
         response.status(401).json({error: "Unauthorized"});
