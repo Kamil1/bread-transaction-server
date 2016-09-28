@@ -3,7 +3,7 @@ var bodyParser = require('body-parser');
 var pg = require('pg');
 var uuid = require('uuid');
 var url = require('url');
-var request = require('request');
+var makeRequest = require('request');
 var express = require('express');
 
 var pgParams = url.parse(process.env.DATABASE_URL);
@@ -24,7 +24,7 @@ var app = express();
 var port = process.env.PORT || 8081;
 var jsonParser = bodyParser.json();
 
-var STATUS_SERVER = "https://bread-status-server.herokuapp.com/"
+var POST_SERVER = "https://bread-post-server.herokuapp.com/";
 
 var begin = function(client, done, query) {
     client.query('BEGIN', function(err) {
@@ -196,6 +196,18 @@ function saveToFirebase(transactionID, clientID, itemID, quantity, bread, userID
 
     userRef.child(transactionID).set(userTransaction, function() {
         transactionRef.child(transactionID).set(transaction, function() {
+            var options = {
+                body: {transaction_id: transactionID},
+                json: true,
+                url: POST_SERVER + "share_transaction"
+            };
+            makeRequest.post(options, function(error, res, body) {
+                if (error) {
+                    response.status(500).json({error: "Internal Server Error"});
+                    return;
+                }
+                callback();
+            })
             callback();
         });
     });
@@ -212,13 +224,13 @@ var firebaseDB = firebase.database();
 
 app.use(bodyParser.json());
 
+app.listen(port, function() {
+    console.log('App is running on http://localhost:%s', port);
+});
+
 app.get('/', function(request, response) {
   response.writeHead(200, {'Content-Type': 'text/plain'});
   response.end('A-Ok');
-});
-
-app.listen(port, function() {
-    console.log('App is running on http://localhost:%s', port);
 });
 
 app.post('/create_transaction', jsonParser, function(request, response) {
