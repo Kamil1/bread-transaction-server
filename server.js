@@ -176,19 +176,16 @@ function expirePendingTransactions() {
 
 function saveToFirebase(transactionID, clientID, itemID, quantity, bread, userID, timestamp, callback) {
     var userRef = firebaseDB.ref("users/" + userID + "/transactions/");
-    var userTransaction = {};
-    var userTransactionData = {
+    var userTransaction = {
         client_id: clientID,
         item_id: itemID,
         "quantity": quantity,
         "bread": bread,
         "timestamp": timestamp
     };
-    userTransaction[transactionID] = userTransactionData;
 
     var transactionRef = firebaseDB.ref("transactions");
-    var transaction = {};
-    var transactionData = {
+    var transaction = {
         user_id: userID,
         client_id: clientID,
         item_id: itemID,
@@ -196,10 +193,9 @@ function saveToFirebase(transactionID, clientID, itemID, quantity, bread, userID
         "bread": bread,
         "timestamp": timestamp
     };
-    transaction[transactionID] = transactionData;
 
-    userRef.update(userTransaction, function() {
-        transactionRef.set(transaction, function() {
+    userRef.child(transactionID).set(userTransaction, function() {
+        transactionRef.child(transactionID).set(transaction, function() {
             callback();
         });
     });
