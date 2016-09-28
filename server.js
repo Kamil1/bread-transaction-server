@@ -208,7 +208,6 @@ function saveToFirebase(transactionID, clientID, itemID, quantity, bread, userID
                 }
                 callback();
             })
-            callback();
         });
     });
 }
