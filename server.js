@@ -198,7 +198,7 @@ function saveToFirebase(transactionID, clientID, itemID, quantity, bread, userID
     };
     transaction[transactionID] = transactionData;
 
-    userRef.set(userTransaction, function() {
+    userRef.update(userTransaction, function() {
         transactionRef.set(transaction, function() {
             callback();
         });
