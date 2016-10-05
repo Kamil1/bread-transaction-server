@@ -257,11 +257,12 @@ app.post('/create_transaction', jsonParser, function(request, response) {
                     rollback(client, done);
                     return;
                 }
-                if (result.rows[0].pending_transactions > 3) {
-                    response.status(429).json({error: "Too Many Requests"});
-                    rollback(client, done);
-                    return;
-                }
+                // TODO: Add back pending limit
+                // if (result.rows[0].pending_transactions > 3) {
+                //     response.status(429).json({error: "Too Many Requests"});
+                //     rollback(client, done);
+                //     return;
+                // }
 
                 createPendingTransaction(client, done)
             });
