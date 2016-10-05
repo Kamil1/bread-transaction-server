@@ -317,7 +317,13 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                     response.status(500).json({error: "Internal Server Error"});
                     return;
                 }
+
                 var row = result.rows[0];
+
+                if (row) {
+                    response.status(400).json({error: "Bad Request"});
+                    return;
+                }
 
                 var now = (new Date).getTime() / 1000;
                 var created_datetime = row.created_datetime;
