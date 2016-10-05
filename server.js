@@ -322,6 +322,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
 
                 if (row) {
                     response.status(400).json({error: "Bad Request"});
+                    console.log("Transaction ID does not exist: " + transactionID);
                     return;
                 }
 
