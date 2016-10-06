@@ -383,9 +383,9 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                             } else {
                                 console.log("Invoicing transaction");
                                 movePendingTransaction(transactionID, "fulfilled_transaction", response, function() {
-                                    saveToFirebase(transactionID, clientID, itemID, quantity, bread, userID, created_datetime, function() {
+                                    saveToFirebase(transactionID, clientID, itemID, quantity, bread, userID, parseInt(created_datetime), function() {
                                         console.log("replying with success message");
-                                        response.status(200).json({result: "Transaction Successfully Cancelled"});
+                                        response.status(200).json({result: "Transaction Successfully Completed"});
                                     });
                                 });
                             }
