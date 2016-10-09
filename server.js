@@ -462,8 +462,7 @@ app.post('/verify_otp', jsonParser, function(request, response) {
         return str;
     }
 
-    function verifyOTP(epoch, candidateOTP) {
-        var key = snapshot.val();
+    function verifyOTP(key, epoch, candidateOTP) {
         var time = leftpad(dec2hex(Math.floor(epoch / 30)), 16, '0');
 
         // updated for jsSHA v2.0.0 - http://caligatio.github.io/jsSHA/
@@ -494,14 +493,16 @@ app.post('/verify_otp', jsonParser, function(request, response) {
             function notNull(val) {
                 return val != null
             }
+
+            var key = snapshot.val();
     
             var epoch1 = Math.round(new Date().getTime() / 1000.0);
             var epoch2 = epoch1 - 30;
             var epoch3 = epoch1 + 30;
     
-            var result1 = verifyOTP(epoch1, otp);
-            var result2 = verifyOTP(epoch2, otp);
-            var result3 = verifyOTP(epoch3, otp);
+            var result1 = verifyOTP(key, epoch1, otp);
+            var result2 = verifyOTP(key, epoch2, otp);
+            var result3 = verifyOTP(key, epoch3, otp);
     
             var results = [result1, result2, result3];
     
