@@ -469,8 +469,6 @@ app.post('/verify_otp', jsonParser, function(request, response) {
         shaObj.setHMACKey(key, "TEXT");
         shaObj.update(time);
         var hmac = shaObj.getHMAC("HEX");
-
-        console.log("jsSHA issue");
         
         var offset = hex2dec(hmac.substring(hmac.length - 1));
         var part1 = hmac.substr(0, offset * 2);
@@ -481,7 +479,9 @@ app.post('/verify_otp', jsonParser, function(request, response) {
         var otp1 = (otp).substr(otp.length - 5, 5);
         var otp2 = (otp).substr(0, 4);
 
-        console.log("should return");
+        console.log("CandidateOTP: " + candidateOTP);
+        console.log("OTP1: " + otp1);
+        console.log("OTP2: " + otp2);
 
         if (candidateOTP == otp1) {
             return otp2;
