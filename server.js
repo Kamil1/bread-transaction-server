@@ -5,6 +5,7 @@ var uuid = require('uuid');
 var url = require('url');
 var makeRequest = require('request');
 var express = require('express');
+var jsSHA = require("jssha");
 
 var pgParams = url.parse(process.env.DATABASE_URL);
 var pgAuth   = pgParams.auth.split(':');
@@ -228,8 +229,7 @@ app.listen(port, function() {
 });
 
 app.get('/', function(request, response) {
-  response.writeHead(200, {'Content-Type': 'text/plain'});
-  response.end('A-Ok');
+  response.status(200).json({result: 'A-Ok'});
 });
 
 app.post('/create_transaction', jsonParser, function(request, response) {
@@ -422,4 +422,112 @@ app.post('/cancel_transaction', jsonParser, function(request, response) {
         console.log(error);
         response.status(401).json({error: "Unauthorized"});
     })
+});
+
+app.post('/verify_otp', jsonParser, function(request, response) {
+    if (!request.body) {
+        response.status(400).json({error: "Bad Request"});
+        return;
+    }
+
+    var token    = request.body.user_token;
+    var clientID = request.body.client_id;
+    var otp      = request.body.otp;
+
+    function dec2hex(s) { return (s < 15.5 ? '0' : '') + Math.round(s).toString(16); }
+    function hex2dec(s) { return parseInt(s, 16); }
+
+    function base32tohex(base32) {
+        var base32chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ234567";
+        var bits = "";
+        var hex = "";
+
+        for (var i = 0; i < base32.length; i++) {
+            var val = base32chars.indexOf(base32.charAt(i).toUpperCase());
+            bits += leftpad(val.toString(2), 5, '0');
+        }
+
+        for (var i = 0; i+4 <= bits.length; i+=4) {
+            var chunk = bits.substr(i, 4);
+            hex = hex + parseInt(chunk, 2).toString(16) ;
+        }
+        return hex;
+
+    }
+
+    function leftpad(str, len, pad) {
+        if (len + 1 >= str.length) {
+            str = Array(len + 1 - str.length).join(pad) + str;
+        }
+        return str;
+    }
+
+    function verifyOTP(epoch, candidateOTP) {
+        var key = snapshot.val();
+        var time = leftpad(dec2hex(Math.floor(epoch / 30)), 16, '0');
+
+        // updated for jsSHA v2.0.0 - http://caligatio.github.io/jsSHA/
+        var shaObj = new jsSHA("SHA-1", "HEX");
+        shaObj.setHMACKey(key, "HEX");
+        shaObj.update(time);
+        var hmac = shaObj.getHMAC("HEX");
+        
+        var offset = hex2dec(hmac.substring(hmac.length - 1));
+        var part1 = hmac.substr(0, offset * 2);
+        var part2 = hmac.substr(offset * 2, 8);
+        var part3 = hmac.substr(offset * 2 + 8, hmac.length - offset);
+
+        var otp = (hex2dec(hmac.substr(offset * 2, 8)) & hex2dec('7fffffff')) + '';
+        var otp1 = (otp).substr(otp.length - 5, 5);
+        var otp2 = (otp).substr(0, 4);
+
+        if (candidateOTP == otp1) {
+            return otp2;
+        } else {
+            return null;
+        }
+    }
+
+    function verifyOTP() {
+        var clientRef = firebaseDB.ref("clients/" + clientID + "/transaction_secret_key");
+        clientRef.once("value").then(function(snapshot) {
+            function notNull(val) {
+                return val != null
+            }
+    
+            var epoch1 = Math.round(new Date().getTime() / 1000.0);
+            var epoch2 = epoch1 - 30;
+            var epoch3 = epoch1 + 30;
+    
+            var result1 = verifyOTP(epoch1, otp);
+            var result2 = verifyOTP(epoch2, otp);
+            var result3 = verifyOTP(epoch3, otp);
+    
+            var results = [result1, result2, result3];
+    
+            var validResults = results.filter(notNull);
+            if (validResults.length != 1) {
+                response.status(200).json({
+                    result: {
+                        verified: false
+                    }
+                });
+            } else {
+                response.status(200).json({
+                    result: {
+                        verified: true,
+                        confirmation_code: validResults[0]
+                    }
+                });
+            }
+        });
+    }
+
+    firebase.auth().verifyIdToken(token).then(function(decodedToken) {
+        verifyOTP();
+    }).catch(function(error) {
+        console.log(error);
+        response.status(401).json({error: "Unauthorized"});
+    })
+
 });
