@@ -465,8 +465,8 @@ app.post('/verify_otp', jsonParser, function(request, response) {
     function checkOTP(key, epoch, candidateOTP) {
         var time = leftpad(dec2hex(Math.floor(epoch / 30)), 16, '0');
 
-        var shaObj = new jsSHA("SHA-1", "TEXT");
-        shaObj.setHMACKey(key, "TEXT");
+        var shaObj = new jsSHA("SHA-1", "HEX");
+        shaObj.setHMACKey(key, "HEX");
         shaObj.update(time);
         var hmac = shaObj.getHMAC("HEX");
         
