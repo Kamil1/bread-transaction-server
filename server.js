@@ -463,9 +463,9 @@ app.post('/verify_otp', jsonParser, function(request, response) {
     }
 
     function verifyOTP(key, epoch, candidateOTP) {
+        console.log("verify otp 2");
         var time = leftpad(dec2hex(Math.floor(epoch / 30)), 16, '0');
 
-        // updated for jsSHA v2.0.0 - http://caligatio.github.io/jsSHA/
         var shaObj = new jsSHA("SHA-1", "HEX");
         shaObj.setHMACKey(key, "HEX");
         shaObj.update(time);
@@ -490,8 +490,9 @@ app.post('/verify_otp', jsonParser, function(request, response) {
     function verifyOTP() {
         var clientRef = firebaseDB.ref("clients/" + clientID + "/transaction_secret_key");
         clientRef.once("value").then(function(snapshot) {
+            console.log("verify otp 1");
             function notNull(val) {
-                return val != null
+                return (val != null);
             }
 
             var key = snapshot.val();
