@@ -469,6 +469,8 @@ app.post('/verify_otp', jsonParser, function(request, response) {
         shaObj.setHMACKey(key, "HEX");
         shaObj.update(time);
         var hmac = shaObj.getHMAC("HEX");
+
+        console.log("jsSHA issue");
         
         var offset = hex2dec(hmac.substring(hmac.length - 1));
         var part1 = hmac.substr(0, offset * 2);
