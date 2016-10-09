@@ -497,7 +497,8 @@ app.post('/verify_otp', jsonParser, function(request, response) {
                 return (val != null);
             }
 
-            var key = snapshot.val();
+            var secret = snapshot.val();
+            var key = base32tohex(secret);
     
             var epoch1 = Math.round(new Date().getTime() / 1000.0);
             var epoch2 = epoch1 - 30;
