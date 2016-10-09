@@ -463,7 +463,6 @@ app.post('/verify_otp', jsonParser, function(request, response) {
     }
 
     function checkOTP(key, epoch, candidateOTP) {
-        console.log("verify otp 2");
         var time = leftpad(dec2hex(Math.floor(epoch / 30)), 16, '0');
 
         var shaObj = new jsSHA("SHA-1", "HEX");
@@ -480,6 +479,8 @@ app.post('/verify_otp', jsonParser, function(request, response) {
         var otp1 = (otp).substr(otp.length - 5, 5);
         var otp2 = (otp).substr(0, 4);
 
+        console.log("should return");
+
         if (candidateOTP == otp1) {
             return otp2;
         } else {
@@ -490,7 +491,6 @@ app.post('/verify_otp', jsonParser, function(request, response) {
     function verifyOTP() {
         var clientRef = firebaseDB.ref("clients/" + clientID + "/transaction_secret_key");
         clientRef.once("value").then(function(snapshot) {
-            console.log("verify otp 1");
             function notNull(val) {
                 return (val != null);
             }
@@ -508,13 +508,16 @@ app.post('/verify_otp', jsonParser, function(request, response) {
             var results = [result1, result2, result3];
     
             var validResults = results.filter(notNull);
+
             if (validResults.length != 1) {
+                console.log("invalid");
                 response.status(200).json({
                     result: {
                         verified: false
                     }
                 });
             } else {
+                console.log("valid");
                 response.status(200).json({
                     result: {
                         verified: true,
