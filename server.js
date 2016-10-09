@@ -462,7 +462,7 @@ app.post('/verify_otp', jsonParser, function(request, response) {
         return str;
     }
 
-    function verifyOTP(key, epoch, candidateOTP) {
+    function checkOTP(key, epoch, candidateOTP) {
         console.log("verify otp 2");
         var time = leftpad(dec2hex(Math.floor(epoch / 30)), 16, '0');
 
@@ -501,9 +501,9 @@ app.post('/verify_otp', jsonParser, function(request, response) {
             var epoch2 = epoch1 - 30;
             var epoch3 = epoch1 + 30;
     
-            var result1 = verifyOTP(key, epoch1, otp);
-            var result2 = verifyOTP(key, epoch2, otp);
-            var result3 = verifyOTP(key, epoch3, otp);
+            var result1 = checkOTP(key, epoch1, otp);
+            var result2 = checkOTP(key, epoch2, otp);
+            var result3 = checkOTP(key, epoch3, otp);
     
             var results = [result1, result2, result3];
     
