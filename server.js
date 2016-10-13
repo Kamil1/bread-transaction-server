@@ -555,7 +555,7 @@ app.post('/client_details', jsonParser, function(request, response) {
             var data = snapshot.val();
 
             var developer = data["developer"];
-            var name = data["clientName"];
+            var name = data["app_name"];
             var description = data["description"];
             var num_screenshots = data["num_screenshots"];
 
