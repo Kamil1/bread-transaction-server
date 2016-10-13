@@ -539,3 +539,43 @@ app.post('/verify_otp', jsonParser, function(request, response) {
     })
 
 });
+
+app.post('/client_detail', jsonParser, function(request, response) {
+    if (!request.body) {
+        response.status(400).json({error: "Bad Request"});
+        return;
+    }
+
+    var clientID = request.body.client_id;
+
+    function getDetails() {
+        var clientRef = firebaseDB.ref("clients/" + clientID);
+        clientRef.once("value").then(function(snapshot) {
+            var data = snapshot.val();
+
+            var developer = data["developer"];
+            var name = data["clientName"];
+            var description = data["description"];
+            var num_screenshots = data["num_screenshots"];
+
+            response.status(200).json({
+                result: {
+                    developer: developer,
+                    name: name,
+                    description: description,
+                    num_screenshots: num_screenshots
+                }
+            });
+            return;
+        });
+
+    }
+
+    firebase.auth().verifyIdToken(token).then(function(decodedToken) {
+        getDetails();
+    }).catch(function(error) {
+        console.log(error);
+        response.status(401).json({error: "Unauthorized"});
+    })
+
+});
