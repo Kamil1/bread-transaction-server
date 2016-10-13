@@ -540,7 +540,7 @@ app.post('/verify_otp', jsonParser, function(request, response) {
 
 });
 
-app.post('/client_detail', jsonParser, function(request, response) {
+app.post('/client_details', jsonParser, function(request, response) {
     if (!request.body) {
         response.status(400).json({error: "Bad Request"});
         return;
@@ -558,11 +558,6 @@ app.post('/client_detail', jsonParser, function(request, response) {
             var name = data["clientName"];
             var description = data["description"];
             var num_screenshots = data["num_screenshots"];
-
-            console.log("Developer: " + developer);
-            console.log("Name: " + name);
-            console.log("description: " + description);
-            console.log("Number of Screenshots: " + num_screenshots);
 
             response.status(200).json({
                 result: {
