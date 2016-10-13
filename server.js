@@ -547,6 +547,7 @@ app.post('/client_detail', jsonParser, function(request, response) {
     }
 
     var clientID = request.body.client_id;
+    var token = request.body.user_token;
 
     function getDetails() {
         var clientRef = firebaseDB.ref("clients/" + clientID);
@@ -566,7 +567,6 @@ app.post('/client_detail', jsonParser, function(request, response) {
                     num_screenshots: num_screenshots
                 }
             });
-            return;
         });
 
     }
