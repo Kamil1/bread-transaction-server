@@ -550,7 +550,7 @@ app.post('/client_detail', jsonParser, function(request, response) {
     var token = request.body.user_token;
 
     function getDetails() {
-        var clientRef = firebaseDB.ref("clients/" + clientID);
+        var clientRef = firebaseDB.ref("clients/" + clientID + "/public");
         clientRef.once("value").then(function(snapshot) {
             var data = snapshot.val();
 
