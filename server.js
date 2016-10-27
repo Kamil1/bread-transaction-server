@@ -536,7 +536,7 @@ app.post('/verify_otp', jsonParser, function(request, response) {
     }).catch(function(error) {
         console.log(error);
         response.status(401).json({error: "Unauthorized"});
-    })
+    });
 
 });
 
@@ -576,6 +576,43 @@ app.post('/client_details', jsonParser, function(request, response) {
     }).catch(function(error) {
         console.log(error);
         response.status(401).json({error: "Unauthorized"});
-    })
+    });
 
 });
+
+app.post('/item_details', jsonParser, function(request, response) {
+    if (!request.body) {
+        response.body(400).json({error: "Bad Request"});
+        return;
+    }
+
+    var clientID = request.body.client_id;
+    var itemID = request.body.item_id;
+    var token = request.body.token;
+
+    function getDetails() {
+        var itemRef = firebaseDB.ref("clients"/ + clientID + "/items/" + itemID);
+        itemRef.once("value")then(function(snapshot) {
+            var data = snapshot.val();
+
+            var description = data["description"];
+            var name = data["name"];
+            var icon = data["icon"];
+
+            response.status(200).json({
+                result: {
+                    description: description,
+                    name: name,
+                    icon: icon
+                }
+            });
+        });
+    }
+
+    firebase.auth().verifyIdToken(token).then(function(decodedToken) {
+        getDetails();
+    }).catch(function(error) {
+        console.log(error);
+        response.status(401).json({error: "Bad Request"});
+    });
+})
