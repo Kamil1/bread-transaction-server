@@ -592,7 +592,7 @@ app.post('/item_details', jsonParser, function(request, response) {
 
     function getDetails() {
         var itemRef = firebaseDB.ref("clients"/ + clientID + "/items/" + itemID);
-        itemRef.once("value")then(function(snapshot) {
+        itemRef.once("value").then(function(snapshot) {
             var data = snapshot.val();
 
             var description = data["description"];
