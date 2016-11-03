@@ -588,7 +588,7 @@ app.post('/item_details', jsonParser, function(request, response) {
 
     var clientID = request.body.client_id;
     var itemID = request.body.item_id;
-    var token = request.body.token;
+    var token = request.body.user_token;
 
     function getDetails() {
         var itemRef = firebaseDB.ref("clients"/ + clientID + "/items/" + itemID);
