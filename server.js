@@ -232,7 +232,7 @@ app.get('/', function(request, response) {
   response.status(200).json({result: 'A-Ok'});
 });
 
-app.post('/create_transaction', jsonParser, function(request, response) {
+app.post('/create_item_transaction', jsonParser, function(request, response) {
     if (!request.body) {
         response.status(400).json({error: "Bad Request"});
         return;
@@ -371,7 +371,7 @@ app.post('/execute_transaction', jsonParser, function(request, response) {
                             return;
                         }
 
-                        var userItem = firebaseDB.ref('users/' + userID + '/clients/' + clientID + '/' + itemID);
+                        var userItem = firebaseDB.ref('users/' + userID + '/items/' + clientID + '/' + itemID);
                         console.log("Crediting user items");
                         userItem.transaction(function(currentItem) {
                             if (currentItem === null) return quantity;
@@ -548,31 +548,26 @@ app.post('/client_details', jsonParser, function(request, response) {
 
     var clientID = request.body.client_id;
     var token = request.body.user_token;
+    var responseObj = {};
 
-    function getDetails() {
+    function getDetails(userID) {
         var clientRef = firebaseDB.ref("clients/" + clientID + "/public");
         clientRef.once("value").then(function(snapshot) {
             var data = snapshot.val();
 
-            var developer = data["developer"];
-            var name = data["app_name"];
-            var description = data["description"];
-            var num_screenshots = data["num_screenshots"];
+            responseObj["developer"] = data["developer"];
+            responseObj["name"] = data["app_name"];
+            responseObj["description"] = data["description"];
+            responseObj["num_screenshots"] = data["num_screenshots"];
 
-            response.status(200).json({
-                result: {
-                    developer: developer,
-                    name: name,
-                    description: description,
-                    num_screenshots: num_screenshots
-                }
-            });
+            response.status(200).json(responseObj);
+            
         });
 
     }
 
     firebase.auth().verifyIdToken(token).then(function(decodedToken) {
-        getDetails();
+        getDetails(decodedToken.uid);
     }).catch(function(error) {
         console.log(error);
         response.status(401).json({error: "Unauthorized"});
